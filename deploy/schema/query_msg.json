@@ -1,0 +1,154 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QueryMsg",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "get_rounds"
+      ],
+      "properties": {
+        "get_rounds": {
+          "type": "object",
+          "required": [
+            "round_numbers"
+          ],
+          "properties": {
+            "round_numbers": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_configs"
+      ],
+      "properties": {
+        "get_configs": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_user_rounds_ticket_count"
+      ],
+      "properties": {
+        "get_user_rounds_ticket_count": {
+          "type": "object",
+          "required": [
+            "address",
+            "key",
+            "round_numbers"
+          ],
+          "properties": {
+            "address": {
+              "$ref": "#/definitions/HumanAddr"
+            },
+            "key": {
+              "type": "string"
+            },
+            "round_numbers": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_paginated_user_rounds"
+      ],
+      "properties": {
+        "get_paginated_user_rounds": {
+          "type": "object",
+          "required": [
+            "address",
+            "key",
+            "page",
+            "page_size"
+          ],
+          "properties": {
+            "address": {
+              "$ref": "#/definitions/HumanAddr"
+            },
+            "key": {
+              "type": "string"
+            },
+            "page": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "page_size": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "get_user_round_paginated_tickets"
+      ],
+      "properties": {
+        "get_user_round_paginated_tickets": {
+          "type": "object",
+          "required": [
+            "address",
+            "key",
+            "page",
+            "page_size",
+            "round_number"
+          ],
+          "properties": {
+            "address": {
+              "$ref": "#/definitions/HumanAddr"
+            },
+            "key": {
+              "type": "string"
+            },
+            "page": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "page_size": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "round_number": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "HumanAddr": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InitMsg",
+  "type": "object",
+  "required": [
+    "base_reward_pot_allocations",
+    "min_round_trigger_in_blocks",
+    "minimum_next_round_allocation",
+    "per_ticket_bulk_discount",
+    "prng_seed",
+    "staking_contract",
+    "ticket_price",
+    "token",
+    "triggerer",
+    "viewing_key"
+  ],
+  "properties": {
+    "base_reward_pot_allocations": {
+      "$ref": "#/definitions/RewardPoolAllocations"
+    },
+    "min_round_trigger_in_blocks": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0.0
+    },
+    "minimum_next_round_allocation": {
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0.0
+    },
+    "per_ticket_bulk_discount": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "prng_seed": {
+      "$ref": "#/definitions/Binary"
+    },
+    "staking_contract": {
+      "$ref": "#/definitions/SecretContract"
+    },
+    "ticket_price": {
+      "$ref": "#/definitions/Uint128"
+    },
+    "token": {
+      "$ref": "#/definitions/SecretContract"
+    },
+    "triggerer": {
+      "$ref": "#/definitions/HumanAddr"
+    },
+    "viewing_key": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
+      "type": "string"
+    },
+    "HumanAddr": {
+      "type": "string"
+    },
+    "RewardPoolAllocations": {
+      "type": "object",
+      "required": [
+        "burn",
+        "sequence_1",
+        "sequence_2",
+        "sequence_3",
+        "sequence_4",
+        "sequence_5",
+        "sequence_6",
+        "triggerer"
+      ],
+      "properties": {
+        "burn": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_1": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_2": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_3": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_4": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_5": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_6": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "triggerer": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        }
+      }
+    },
+    "SecretContract": {
+      "type": "object",
+      "required": [
+        "address",
+        "contract_hash"
+      ],
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/HumanAddr"
+        },
+        "contract_hash": {
+          "type": "string"
+        }
+      }
+    },
+    "Uint128": {
+      "type": "string"
+    }
+  }
+}

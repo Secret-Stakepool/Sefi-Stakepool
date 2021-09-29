@@ -1,0 +1,362 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HandleMsg",
+  "anyOf": [
+    {
+      "type": "object",
+      "required": [
+        "change_admin"
+      ],
+      "properties": {
+        "change_admin": {
+          "type": "object",
+          "required": [
+            "admin"
+          ],
+          "properties": {
+            "admin": {
+              "$ref": "#/definitions/HumanAddr"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "change_triggerer"
+      ],
+      "properties": {
+        "change_triggerer": {
+          "type": "object",
+          "required": [
+            "triggerer"
+          ],
+          "properties": {
+            "triggerer": {
+              "$ref": "#/definitions/HumanAddr"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "change_bulk_discount"
+      ],
+      "properties": {
+        "change_bulk_discount": {
+          "type": "object",
+          "required": [
+            "discount"
+          ],
+          "properties": {
+            "discount": {
+              "$ref": "#/definitions/Uint128"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "change_min_blocks_per_round"
+      ],
+      "properties": {
+        "change_min_blocks_per_round": {
+          "type": "object",
+          "required": [
+            "blocks"
+          ],
+          "properties": {
+            "blocks": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "create_viewing_key"
+      ],
+      "properties": {
+        "create_viewing_key": {
+          "type": "object",
+          "required": [
+            "entropy"
+          ],
+          "properties": {
+            "entropy": {
+              "type": "string"
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "set_viewing_key"
+      ],
+      "properties": {
+        "set_viewing_key": {
+          "type": "object",
+          "required": [
+            "key"
+          ],
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "padding": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "trigger_close_round"
+      ],
+      "properties": {
+        "trigger_close_round": {
+          "type": "object",
+          "required": [
+            "entropy"
+          ],
+          "properties": {
+            "entropy": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "trigger_end_and_start_round"
+      ],
+      "properties": {
+        "trigger_end_and_start_round": {
+          "type": "object"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "receive"
+      ],
+      "properties": {
+        "receive": {
+          "type": "object",
+          "required": [
+            "amount",
+            "from",
+            "msg",
+            "sender"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
+            },
+            "from": {
+              "$ref": "#/definitions/HumanAddr"
+            },
+            "msg": {
+              "$ref": "#/definitions/Binary"
+            },
+            "sender": {
+              "$ref": "#/definitions/HumanAddr"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "buy_tickets"
+      ],
+      "properties": {
+        "buy_tickets": {
+          "type": "object",
+          "required": [
+            "entropy",
+            "tickets"
+          ],
+          "properties": {
+            "entropy": {
+              "type": "string"
+            },
+            "tickets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "claim_rewards"
+      ],
+      "properties": {
+        "claim_rewards": {
+          "type": "object",
+          "required": [
+            "round",
+            "tickets_index"
+          ],
+          "properties": {
+            "round": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "tickets_index": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "change_base_reward_pool_allocations"
+      ],
+      "properties": {
+        "change_base_reward_pool_allocations": {
+          "type": "object",
+          "required": [
+            "base_reward_pot_allocations",
+            "minimum_next_round_allocation"
+          ],
+          "properties": {
+            "base_reward_pot_allocations": {
+              "$ref": "#/definitions/RewardPoolAllocations"
+            },
+            "minimum_next_round_allocation": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0.0
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "change_base_ticket_price"
+      ],
+      "properties": {
+        "change_base_ticket_price": {
+          "type": "object",
+          "required": [
+            "base_ticket_price"
+          ],
+          "properties": {
+            "base_ticket_price": {
+              "$ref": "#/definitions/Uint128"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "Binary": {
+      "description": "Binary is a wrapper around Vec<u8> to add base64 de/serialization with serde. It also adds some helper methods to help encode inline.\n\nThis is only needed as serde-json-{core,wasm} has a horrible encoding for Vec<u8>",
+      "type": "string"
+    },
+    "HumanAddr": {
+      "type": "string"
+    },
+    "RewardPoolAllocations": {
+      "type": "object",
+      "required": [
+        "burn",
+        "sequence_1",
+        "sequence_2",
+        "sequence_3",
+        "sequence_4",
+        "sequence_5",
+        "sequence_6",
+        "triggerer"
+      ],
+      "properties": {
+        "burn": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_1": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_2": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_3": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_4": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_5": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "sequence_6": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        },
+        "triggerer": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
+        }
+      }
+    },
+    "Uint128": {
+      "type": "string"
+    }
+  }
+}
