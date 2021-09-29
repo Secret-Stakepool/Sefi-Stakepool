@@ -4,7 +4,7 @@
 
 # Sefi Stakepool
 
-```* (DEPOSIT): User can deposit Sefi.
+`* (DEPOSIT): User can deposit Sefi.
       * Minimum Deposit 1 Sefi or 1000000 uSefi. 
             * Frontend also limits the deposit of lesser than 1 Sefi or 1000000 uSefi.
       * Maximum - No limit.
@@ -13,7 +13,7 @@
             * User with deposits at the 
                   * start of the Stakepool interval gets maximum weightage for the lottery.
                   * end of the Stakepool interval gets minimum weightage for the lottery.
-            * Weightage of the deposits decreases as the Stakepool period comes to an end.```
+            * Weightage of the deposits decreases as the Stakepool period comes to an end.
 
 
 * (STAKING): Deposits are directly staked on the SEFI stake contract
@@ -25,3 +25,4 @@
 * (REDUCE STAKES / TRIGGER WITHDRAW):
       *  
       
+`
