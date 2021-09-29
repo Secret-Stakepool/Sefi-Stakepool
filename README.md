@@ -4,7 +4,7 @@
 
 # Sefi Stakepool
 
-`* (DEPOSIT): User can deposit Sefi.
+```* (DEPOSIT): User can deposit Sefi.
       * Minimum Deposit 1 Sefi or 1000000 uSefi. 
             * Frontend also limits the deposit of lesser than 1 Sefi or 1000000 uSefi.
       * Maximum - No limit.
