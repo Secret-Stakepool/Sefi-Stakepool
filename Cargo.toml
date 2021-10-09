@@ -1,5 +1,5 @@
 [package]
-name = "sefi-stakpool"
+name = "sefi-stakepool"
 version = "0.1.0"
 authors = ["Haseeb30000 <haseebsyed30000@gmail.com>"]
 edition = "2018"
@@ -28,16 +28,18 @@ overflow-checks = true
 
 [features]
 default = []
-# for quicker tests, cargo test --lib
-# for more explicit tests, cargo test --features=backtraces
+#
+## for quicker tests, cargo test --lib
+## for more explicit tests, cargo test --features=backtraces
 backtraces = ["cosmwasm-std/backtraces"]
-debug-print = ["cosmwasm-std/debug-print"]
+
 
 [dependencies]
-cosmwasm-schema = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork", tag = "v1.0.4-debug-print" }
-secret-toolkit = { git = "https://github.com/enigmampc/secret-toolkit", branch = "debug-print" }
+cosmwasm-schema = { git = "https://github.com/enigmampc/SecretNetwork",tag = "v1.0.0" }
+cosmwasm-std = { git = "https://github.com/enigmampc/SecretNetwork",tag = "v1.0.0"}
+cosmwasm-storage = { git = "https://github.com/enigmampc/SecretNetwork",tag = "v1.0.0" }
+secret-toolkit = { git = "https://github.com/Haseeb30000/secret-toolkit",  branch = "master" }
+
 schemars = "0.7"
 serde = { version = "1.0.103", default-features = false, features = ["derive"] }
 snafu = { version = "0.6.3" }

@@ -16,7 +16,7 @@ pub struct InitMsg {
     pub staking_contract: SecretContract,
     pub viewing_key: String,
     pub prng_seed: Binary,
-    pub triggerer_share_percentage:u64,
+    pub triggerer_share_percentage: u64,
 }
 
 
@@ -69,12 +69,8 @@ pub enum HandleMsg {
     ChangeLotteryDuration {
         duration: u64
     },
-    StopContract{
-
-    },
-    ResumeContract{
-
-    },
+    StopContract {},
+    ResumeContract {},
 
 
     //Admin--> Changing contract
@@ -88,9 +84,12 @@ pub enum HandleMsg {
 
     RedelegateToNewContract {},
 
+    //Test
+    TestingDandC {
+        from: HumanAddr,
+    },
 
 }
-
 
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug)]
@@ -120,10 +119,10 @@ pub enum HandleAnswer {
     TriggerWithdraw { status: ResponseStatus },
     Withdraw { status: ResponseStatus },
 
-
-
-
-
+    //Tests
+    TestingDandC {
+        status: ResponseStatus
+    },
 }
 
 
@@ -165,11 +164,14 @@ pub enum QueryMsg {
         address: HumanAddr,
         key: String,
     },
+    UserAllPastRecords {
+        address: HumanAddr,
+        key: String,
+    },
     PastRecords {},
     PastAllRecords {},
 
     //AUTHENTICATED
-
 }
 
 impl Query for QueryMsg {
@@ -183,6 +185,7 @@ impl QueryMsg {
             QueryMsg::Balance { address, key } => (address, ViewingKey(key.clone())),
             QueryMsg::AvailableTokensForWithdrawl { address, key } => (address, ViewingKey(key.clone())),
             QueryMsg::UserPastRecords { address, key } => (address, ViewingKey(key.clone())),
+            QueryMsg::UserAllPastRecords { address, key } => (address, ViewingKey(key.clone())),
 
             _ => panic!("This should never happen"),
         }
@@ -233,6 +236,10 @@ pub enum QueryAnswer {
         winning_history: Vec<(u64, u64)>,
     },
 
+    UserAllPastRecords {
+        winning_history: Vec<(u64, u64)>,
+    },
+
     LotteryInfo {
         start_time: u64,
         end_time: u64,
@@ -240,16 +247,10 @@ pub enum QueryAnswer {
     },
 
     PastRecords {
-        past_winners: Vec<String>,
-        past_number_of_entries: Vec<u64>,
-        past_total_deposits: Vec<u64>,
         past_rewards: Vec<(u64, u64)>,
     },
 
     PastAllRecords {
-        past_winners: Vec<String>,
-        past_number_of_entries: Vec<u64>,
-        past_total_deposits: Vec<u64>,
         past_rewards: Vec<(u64, u64)>,
     },
 

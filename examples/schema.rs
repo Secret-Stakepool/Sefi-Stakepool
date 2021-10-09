@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use sefi_stakpool_v2::msg::{ HandleMsg, InitMsg, QueryMsg};
+use sefi_stakepool::msg::{ HandleMsg, InitMsg, QueryMsg};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

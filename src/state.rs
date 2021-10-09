@@ -1,6 +1,7 @@
-use cosmwasm_std::{HumanAddr,CanonicalAddr, Uint128};
+use cosmwasm_std::{HumanAddr, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+use secret_toolkit::incubator::generational_store::Index;
 
 #[derive(Serialize, Deserialize,  PartialEq, Debug, Clone)]
 pub struct Config {
@@ -26,7 +27,6 @@ pub struct SecretContract {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Lottery {
     //sender_address, amount, entry_time
-    pub entries: Vec<(CanonicalAddr, Uint128,u64)>,
     pub entropy: Vec<u8>,
     pub seed: Vec<u8>,
     pub duration: u64,
@@ -34,12 +34,14 @@ pub struct Lottery {
     pub end_time: u64,
 }
 
+//Append store
+
+//Append store
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct LastLotteryResults {
-    pub past_winners:Vec<String>,
-    pub past_number_of_entries: Vec<u64>,
-    pub past_total_deposits:Vec<u64>,
-    pub past_rewards:Vec<(u64,u64)>
+    //winning amount and time
+    pub winning_amount:u64, //Append store
+    pub time:u64,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
@@ -48,18 +50,32 @@ pub struct SupplyPool {
     pub total_rewards_restaked:Uint128,
     pub pending_staking_rewards:Uint128,
     pub triggering_cost:Uint128
-
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
 pub struct UserInfo {
     pub amount_delegated: Uint128,
     pub available_tokens_for_withdraw:Uint128,
     pub total_won:Uint128,
-    pub winning_history:Vec<(u64,u64)>,
-
+    pub entries: Vec<( Uint128,u64)>,
+    pub entry_index:Vec<Index>,
 }
 
+
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone)]
+pub struct UserWinningHistory{
+    //winning amount and rewards
+    pub winning_amount:u64, //Append store
+    pub time:u64,
+}
+
+//Testing
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct LotteryEntries{
+    pub user_address: HumanAddr,
+    pub amount:Uint128,
+    pub entry_time:u64,
+}
 
 
 
