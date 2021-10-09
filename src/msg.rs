@@ -70,6 +70,7 @@ pub enum HandleMsg {
         duration: u64
     },
     StopContract {},
+    StopContractWithWithdraw {},
     ResumeContract {},
 
 
@@ -81,13 +82,10 @@ pub enum HandleMsg {
         address: HumanAddr,
         contract_hash: String,
     },
-
     RedelegateToNewContract {},
 
     //Test
-    TestingDandC {
-        from: HumanAddr,
-    },
+    AllowWithdrawWhenStopped{}
 
 }
 
@@ -99,10 +97,12 @@ pub enum HandleAnswer {
     CreateViewingKey { key: ViewingKey },
     SetViewingKey { status: ResponseStatus },
     StopContract { status: ResponseStatus },
+    StopContractWithWithdraw { status: ResponseStatus },
     ResumeContract { status: ResponseStatus },
     ChangeAdmin { status: ResponseStatus },
     ChangeTriggerer { status: ResponseStatus },
     ChangeTriggererShare { status: ResponseStatus },
+    AllowWithdrawWhenStopped{status: ResponseStatus},
 
     ChangeStakingContract { status: ResponseStatus },
     ChangeLotteryDuration {

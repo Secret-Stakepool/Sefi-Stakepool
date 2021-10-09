@@ -59,6 +59,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             viewing_key: msg.viewing_key.clone(),
             prng_seed: prng_seed_hashed.to_vec(),
             is_stopped: false,
+            is_stopped_can_withdraw: false,
             own_addr: env.contract.address,
             stopped_emergency_redeem_jackpot: Uint128(0),
         },
@@ -140,20 +141,22 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
     if config.is_stopped {
         let response = match msg {
-
             //USER->Viewing Key
             HandleMsg::CreateViewingKey { entropy, .. } => { create_viewing_key(deps, env, entropy) }
             HandleMsg::SetViewingKey { key, .. } => set_viewing_key(deps, env, key),
 
-
             //Admin  ---> ChangeStakingContractFlow
-            // => 1.set_stop_all_status 2.EmergencyRedeemFromStaking 4.ChangeStakingContract  5.RedelegateToNewContract 6.SetNormalStatus
+            // => 1.StopContract 2.EmergencyRedeemFromStaking 4.ChangeStakingContract  5.RedelegateToNewContract 6.SetNormalStatus
             HandleMsg::EmergencyRedeemFromStaking {} => emergency_redeem_from_staking(deps, env),
             HandleMsg::ChangeStakingContract { address, contract_hash } => change_staking_contract(deps, env, address, contract_hash),
             HandleMsg::RedelegateToNewContract {} => redelegate_to_contract(deps, env),
 
             HandleMsg::ResumeContract {} => resume_contract(deps, env),
             HandleMsg::TriggeringCostWithdraw {} => triggering_cost_withdraw(deps, env),
+
+            //Allow withdraw
+            HandleMsg::Withdraw { amount } => withdraw(deps, env, amount),
+
 
             _ => Err(StdError::generic_err(
                 "This contract is stopped and this action is not allowed",
@@ -184,7 +187,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::ChangeLotteryDuration { duration } => change_lottery_duration(deps, env, duration),
         HandleMsg::TriggeringCostWithdraw {} => triggering_cost_withdraw(deps, env),
         HandleMsg::StopContract {} => stop_contract(deps, env),
-
+        HandleMsg::StopContractWithWithdraw {} => stop_contract_with_withdraw(deps, env),
 
         //TESTS
 
@@ -194,7 +197,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
     };
     pad_handle_result(response, RESPONSE_BLOCK_SIZE)
 }
-
 
 pub fn query<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -522,12 +524,22 @@ fn withdraw<S: Storage, A: Api, Q: Querier>(
     if withdraw_amount <= Uint128(0) {
         return Err(StdError::generic_err("No tokens available for withdraw"));
     }
-    if user.available_tokens_for_withdraw < withdraw_amount {
-        return Err(StdError::generic_err("Withdrawing more amount than available tokens for withdraw"));
-    }
 
-    user.available_tokens_for_withdraw = (user.available_tokens_for_withdraw - withdraw_amount).unwrap();
-    userstore.store(env.message.sender.0.as_bytes(), &user)?;
+    if !config.is_stopped_can_withdraw{
+        if user.available_tokens_for_withdraw < withdraw_amount {
+            return Err(StdError::generic_err("Withdrawing more amount than Available tokens for withdraw"));
+        }
+
+        user.available_tokens_for_withdraw = (user.available_tokens_for_withdraw - withdraw_amount).unwrap();
+        userstore.store(env.message.sender.0.as_bytes(), &user)?;
+    }
+    if config.is_stopped_can_withdraw{
+        if user.amount_delegated < withdraw_amount {
+            return Err(StdError::generic_err("Withdrawing more amount than Delegate"));
+        }
+        user.amount_delegated = (user.amount_delegated - withdraw_amount).unwrap();
+        userstore.store(env.message.sender.0.as_bytes(), &user)?;
+    }
 
     let messages: Vec<CosmosMsg> = vec![
         // Transfer Trigger fee to triggerer wallet
@@ -866,6 +878,7 @@ pub fn change_staking_contract<S: Storage, A: Api, Q: Querier>(
 }
 
 
+
 fn resume_contract<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -910,7 +923,32 @@ fn stop_contract<S: Storage, A: Api, Q: Querier>(
         });
     } else {
         return Err(StdError::generic_err(format!(
-            "User does not have permissions to resume contract!"
+            "User does not have permissions to stop contract!"
+        )));
+    }
+}
+
+fn stop_contract_with_withdraw<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+) -> StdResult<HandleResponse> {
+    let mut config_prefixed = PrefixedStorage::multilevel(&[CONFIG_KEY_PREFIX], &mut deps.storage);
+    let mut configstore = TypedStoreMut::<Config, PrefixedStorage<'_, S>>::attach(&mut config_prefixed);
+    let mut config: Config = configstore.load(CONFIG_KEY)?;
+
+    if env.message.sender == config.admin && !config.is_stopped {
+        config.is_stopped = true;
+        config.is_stopped_can_withdraw=true;
+        configstore.store(CONFIG_KEY, &config)?;
+
+        return Ok(HandleResponse {
+            messages: vec![],
+            log: vec![],
+            data: Some(to_binary(&HandleAnswer::StopContractWithWithdraw { status: Success })?),
+        });
+    } else {
+        return Err(StdError::generic_err(format!(
+            "User does not have permissions to stop contract!"
         )));
     }
 }
@@ -1307,9 +1345,8 @@ mod tests {
     use secret_toolkit::utils::Query;
     use std::any::Any;
     use cosmwasm_std::QueryResponse;
-    use secret_toolkit::incubator::{GenerationalStore, GenerationalStoreMut};
+    use secret_toolkit::incubator::{ GenerationalStoreMut};
     use secret_toolkit::incubator::generational_store::Entry;
-    use std::borrow::Borrow;
 
 
     fn extract_error_msg<T: Any>(error: StdResult<T>) -> String {
@@ -1456,7 +1493,7 @@ mod tests {
         //checking the amount delegated
         let mut userprefixed = ReadonlyPrefixedStorage::multilevel(&[USER_INFO_KEY, HumanAddr("Batman".to_string()).0.as_bytes()], &mocked_deps.storage);
         let userstore = TypedStore::<UserInfo, ReadonlyPrefixedStorage<'_, MockStorage>>::attach(&mut userprefixed);
-        let mut user: UserInfo = userstore.load(HumanAddr("Batman".to_string()).0.as_bytes()).unwrap();
+        let  user: UserInfo = userstore.load(HumanAddr("Batman".to_string()).0.as_bytes()).unwrap();
         assert_eq!(user.amount_delegated, Uint128(100000000));
         assert_eq!(user.available_tokens_for_withdraw, Uint128(0));
 
@@ -1474,7 +1511,7 @@ mod tests {
         //checking lottery entries
         mocked_deps = deposit_helper(mocked_deps, mock_env("sefi", &[], 0));
         let mut lottery_entries = PrefixedStorage::multilevel(&[LOTTERY_ENTRY_KEY], &mut mocked_deps.storage);
-        let mut lottery_entries_append = GenerationalStoreMut::<LotteryEntries, PrefixedStorage<'_, MockStorage>>::attach_or_create(&mut lottery_entries).unwrap();
+        let  lottery_entries_append = GenerationalStoreMut::<LotteryEntries, PrefixedStorage<'_, MockStorage>>::attach_or_create(&mut lottery_entries).unwrap();
         let iterator = lottery_entries_append.iter().filter(|item| matches!(item, (_, Entry::Occupied { .. })));
         assert_eq!(iterator.count(), 11);
 
@@ -1501,9 +1538,9 @@ mod tests {
         }
 
         let mut lottery_entries = PrefixedStorage::multilevel(&[LOTTERY_ENTRY_KEY], &mut mocked_deps.storage);
-        let mut lottery_entries_append = GenerationalStoreMut::<LotteryEntries, PrefixedStorage<MockStorage>>::attach_or_create(&mut lottery_entries).unwrap();
+        let  lottery_entries_append = GenerationalStoreMut::<LotteryEntries, PrefixedStorage<MockStorage>>::attach_or_create(&mut lottery_entries).unwrap();
         for i in lottery_entries_append.iter() {
-            let user_address = match i.1 {
+            let _user_address = match i.1 {
                 Entry::Occupied { generation: _, value } => value,
                 _ => panic!("Unexpected result "),
             };
@@ -1513,7 +1550,7 @@ mod tests {
         let _res = trigger_withdraw(&mut mocked_deps, mock_env("Batman", &[], 0), Option::from(Uint128(400000000))).unwrap();
         let mut userprefixed = ReadonlyPrefixedStorage::multilevel(&[USER_INFO_KEY, "Batman".as_bytes()], &mocked_deps.storage);
         let userstore = TypedStore::<UserInfo, ReadonlyPrefixedStorage<'_, MockStorage>>::attach(&mut userprefixed);
-        let mut user: UserInfo = userstore.load("Batman".as_bytes()).unwrap();
+        let  user: UserInfo = userstore.load("Batman".as_bytes()).unwrap();
         assert_eq!(user.available_tokens_for_withdraw.0, 400000000);
         assert_eq!(user.entry_index.len(), 2);
 
@@ -1521,7 +1558,7 @@ mod tests {
         let _res = trigger_withdraw(&mut mocked_deps, mock_env("Batman", &[], 0), Option::from(Uint128(400000000))).unwrap();
         let mut userprefixed = ReadonlyPrefixedStorage::multilevel(&[USER_INFO_KEY, "Batman".as_bytes()], &mocked_deps.storage);
         let userstore = TypedStore::<UserInfo, ReadonlyPrefixedStorage<'_, MockStorage>>::attach(&mut userprefixed);
-        let mut user: UserInfo = userstore.load("Batman".as_bytes()).unwrap();
+        let  user: UserInfo = userstore.load("Batman".as_bytes()).unwrap();
         assert_eq!(user.available_tokens_for_withdraw.0, 800000000);
         assert_eq!(user.entry_index.len(), 1);
     }
@@ -1808,10 +1845,10 @@ mod tests {
             HandleAnswer::ClaimRewards { status: _, winner } => winner,
             _ => panic!("Unexpected result from handle"),
         };
-        let res: QueryAnswer = from_binary(&query_past_results(&mocked_deps).unwrap()).unwrap();
+        let _res: QueryAnswer = from_binary(&query_past_results(&mocked_deps).unwrap()).unwrap();
         // println!("{:?}",res);
 
-        let res: QueryAnswer = from_binary(&query_all_past_results(&mocked_deps).unwrap()).unwrap();
+        let _res: QueryAnswer = from_binary(&query_all_past_results(&mocked_deps).unwrap()).unwrap();
         // println!("{:?}",res);
     }
 
@@ -1861,7 +1898,7 @@ mod tests {
         };
 
         let query_response = query(&mocked_deps, query_balance_msg).unwrap();
-        let results: QueryAnswer = from_binary(&query_response).unwrap();
+        let _results: QueryAnswer = from_binary(&query_response).unwrap();
         // println!(".............................................. {:?}",results);
 
         // println!("The balance is {:?}",results)

@@ -13,6 +13,7 @@ pub struct Config {
     pub viewing_key: String,
     pub prng_seed: Vec<u8>,
     pub is_stopped: bool,
+    pub is_stopped_can_withdraw:bool,
     pub own_addr: HumanAddr,
     pub stopped_emergency_redeem_jackpot: Uint128
 }
