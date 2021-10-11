@@ -15,7 +15,6 @@ pub struct Config {
     pub is_stopped: bool,
     pub is_stopped_can_withdraw:bool,
     pub own_addr: HumanAddr,
-    pub stopped_emergency_redeem_jackpot: Uint128
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone, JsonSchema)]

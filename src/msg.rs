@@ -56,6 +56,7 @@ pub enum HandleMsg {
 
     //Admin
     TriggeringCostWithdraw {},
+    WithdrawExcess{},
     ChangeAdmin {
         admin: HumanAddr
     },
@@ -70,13 +71,12 @@ pub enum HandleMsg {
         duration: u64
     },
     StopContract {},
-    StopContractWithWithdraw {},
+    AllowWithdrawWhenStopped {},
     ResumeContract {},
 
 
     //Admin--> Changing contract
-    // ChangeStakingContractFlow => 1. stopContact 2.EmergencyRedeemFromStaking 4.ChangeStakingContract 5.SetNormalStatus 6.RedelegateToNewContract
-
+    // ChangeStakingContractFlow => 1. stopContact 2.EmergencyRedeemFromStaking 4.ChangeStakingContract 5.RedelegateToNewContract 6.ResumeContract
     EmergencyRedeemFromStaking {},
     ChangeStakingContract {
         address: HumanAddr,
@@ -84,8 +84,8 @@ pub enum HandleMsg {
     },
     RedelegateToNewContract {},
 
+
     //Test
-    AllowWithdrawWhenStopped{}
 
 }
 
@@ -97,12 +97,11 @@ pub enum HandleAnswer {
     CreateViewingKey { key: ViewingKey },
     SetViewingKey { status: ResponseStatus },
     StopContract { status: ResponseStatus },
-    StopContractWithWithdraw { status: ResponseStatus },
+    AllowWithdrawWhenStopped { status: ResponseStatus },
     ResumeContract { status: ResponseStatus },
     ChangeAdmin { status: ResponseStatus },
     ChangeTriggerer { status: ResponseStatus },
     ChangeTriggererShare { status: ResponseStatus },
-    AllowWithdrawWhenStopped{status: ResponseStatus},
 
     ChangeStakingContract { status: ResponseStatus },
     ChangeLotteryDuration {
@@ -110,6 +109,8 @@ pub enum HandleAnswer {
     },
 
     TriggeringCostWithdraw { status: ResponseStatus },
+    WithdrawExcess { status: ResponseStatus },
+
 
     ClaimRewards { status: ResponseStatus, winner: HumanAddr },
     EmergencyRedeemFromStaking { status: ResponseStatus },
@@ -244,6 +245,8 @@ pub enum QueryAnswer {
         start_time: u64,
         end_time: u64,
         duration: u64,
+        is_stopped:bool,
+        is_stopped_with_withdraw:bool,
     },
 
     PastRecords {

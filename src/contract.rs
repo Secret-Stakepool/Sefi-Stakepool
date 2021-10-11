@@ -61,7 +61,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             is_stopped: false,
             is_stopped_can_withdraw: false,
             own_addr: env.contract.address,
-            stopped_emergency_redeem_jackpot: Uint128(0),
         },
     )?;
 
@@ -80,8 +79,7 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
 
     //lottery init
     let time = env.block.time;
-    // let duration = 86400u64;
-    let duration = 600u64;
+    let duration = 86400u64;
 
     //Create first lottery
     // Save to state
@@ -91,8 +89,8 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
         LOTTERY_KEY,
         &Lottery {
             entropy: prng_seed_hashed.to_vec(),
-            start_time: time + 1,
-            end_time: time + duration + 1,
+            start_time: time + 0,
+            end_time: time + duration + 0,
             seed: prng_seed_hashed.to_vec(),
             duration,
         },
@@ -146,8 +144,14 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
             HandleMsg::SetViewingKey { key, .. } => set_viewing_key(deps, env, key),
 
             //Admin  ---> ChangeStakingContractFlow
-            // => 1.StopContract 2.EmergencyRedeemFromStaking 4.ChangeStakingContract  5.RedelegateToNewContract 6.SetNormalStatus
+            // => 1.StopContract 2.EmergencyRedeemFromStaking
             HandleMsg::EmergencyRedeemFromStaking {} => emergency_redeem_from_staking(deps, env),
+
+            //Option 1)     3. Allow users to Withdraw their amount
+            HandleMsg::AllowWithdrawWhenStopped {} => allow_withdraw_when_stopped(deps, env),
+            HandleMsg::WithdrawExcess {}=> withdraw_excess(deps,env),
+
+            //Option 2)     3. Redelegate the contract
             HandleMsg::ChangeStakingContract { address, contract_hash } => change_staking_contract(deps, env, address, contract_hash),
             HandleMsg::RedelegateToNewContract {} => redelegate_to_contract(deps, env),
 
@@ -156,7 +160,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
 
             //Allow withdraw
             HandleMsg::Withdraw { amount } => withdraw(deps, env, amount),
-
 
             _ => Err(StdError::generic_err(
                 "This contract is stopped and this action is not allowed",
@@ -187,11 +190,7 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         HandleMsg::ChangeLotteryDuration { duration } => change_lottery_duration(deps, env, duration),
         HandleMsg::TriggeringCostWithdraw {} => triggering_cost_withdraw(deps, env),
         HandleMsg::StopContract {} => stop_contract(deps, env),
-        HandleMsg::StopContractWithWithdraw {} => stop_contract_with_withdraw(deps, env),
 
-        //TESTS
-
-        // HandleMsg::TestingDandC { from, .. } => testing_claim_rewards_alternative(deps, env, from),
 
         _ => Err(StdError::generic_err("Unavailable or unknown handle message")),
     };
@@ -206,6 +205,10 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
         QueryMsg::ContractStatus {} => query_contract_status(deps),
         QueryMsg::LotteryInfo {} => {
             // query_lottery_info(&deps.storage)
+            let config_prefixed = ReadonlyPrefixedStorage::multilevel(&[CONFIG_KEY_PREFIX], &deps.storage);
+            let configstore = TypedStore::<Config, ReadonlyPrefixedStorage<'_, S>>::attach(&config_prefixed);
+            let config: Config = configstore.load(CONFIG_KEY)?;
+
             let lottery_prefixed = ReadonlyPrefixedStorage::multilevel(&[LOTTERY_KEY_PREFIX], &deps.storage);
             let lottery_store = TypedStore::<Lottery, ReadonlyPrefixedStorage<'_, S>>::attach(&lottery_prefixed);
             let lottery: Lottery = lottery_store.load(LOTTERY_KEY)?;
@@ -213,6 +216,8 @@ pub fn query<S: Storage, A: Api, Q: Querier>(
                 start_time: lottery.start_time,
                 end_time: lottery.end_time,
                 duration: lottery.duration,
+                is_stopped: config.is_stopped,
+                is_stopped_with_withdraw: config.is_stopped_can_withdraw
             })
         }
         QueryMsg::RewardToken {} => query_token(deps),
@@ -513,6 +518,12 @@ fn withdraw<S: Storage, A: Api, Q: Querier>(
     let configstore = TypedStore::<Config, ReadonlyPrefixedStorage<'_, S>>::attach(&config_prefixed);
     let config: Config = configstore.load(CONFIG_KEY)?;
 
+    if  config.is_stopped && !config.is_stopped_can_withdraw {
+       return  Err(StdError::generic_err(
+            "This contract is stopped and this action is not allowed",
+        ))
+    }
+
     let mut userprefixed = PrefixedStorage::multilevel(&[USER_INFO_KEY, env.message.sender.0.as_bytes()], &mut deps.storage);
     let mut userstore = TypedStoreMut::<UserInfo, PrefixedStorage<'_, S>>::attach(&mut userprefixed);
 
@@ -534,10 +545,17 @@ fn withdraw<S: Storage, A: Api, Q: Querier>(
         userstore.store(env.message.sender.0.as_bytes(), &user)?;
     }
     if config.is_stopped_can_withdraw{
-        if user.amount_delegated < withdraw_amount {
-            return Err(StdError::generic_err("Withdrawing more amount than Delegate"));
+        if user.amount_delegated + user.available_tokens_for_withdraw < withdraw_amount {
+            return Err(StdError::generic_err("Withdrawing more amount than Delegated and available for withdraw"));
         }
-        user.amount_delegated = (user.amount_delegated - withdraw_amount).unwrap();
+        if user.available_tokens_for_withdraw<withdraw_amount{
+            let temp_variable= (withdraw_amount-user.available_tokens_for_withdraw).unwrap();
+            user.available_tokens_for_withdraw=Uint128(0);
+            user.amount_delegated=(user.amount_delegated-temp_variable).unwrap();
+        }else{
+            user.available_tokens_for_withdraw = (user.available_tokens_for_withdraw - withdraw_amount).unwrap();
+        }
+
         userstore.store(env.message.sender.0.as_bytes(), &user)?;
     }
 
@@ -545,14 +563,13 @@ fn withdraw<S: Storage, A: Api, Q: Querier>(
         // Transfer Trigger fee to triggerer wallet
         transfer_msg(
             env.message.sender,
-            Uint128::from(withdraw_amount),
+            withdraw_amount,
             None,
             RESPONSE_BLOCK_SIZE,
             config.token.contract_hash.clone(),
             config.token.address.clone(),
         )?
     ];
-
 
     Ok(HandleResponse {
         messages,
@@ -672,7 +689,7 @@ fn claim_rewards<'a, S: Storage, A: Api, Q: Querier>(
     let mut winning_amount = supply_pool.total_rewards_restaked  + supply_pool.pending_staking_rewards+ response.rewards.rewards;
 
     let trigger_percentage = config.triggerer_share_percentage;
-    let trigger_share = Uint128(winning_amount.0 * ((trigger_percentage * 1000000) as u128) / 100000000);
+    let trigger_share = Uint128(winning_amount.0 * ((trigger_percentage * 1000000) as u128) / 10000000000);
     winning_amount = (winning_amount - trigger_share).unwrap();
     supply_pool.triggering_cost = trigger_share;
     supply_pool.pending_staking_rewards = Uint128(0);
@@ -744,7 +761,7 @@ fn triggering_cost_withdraw<S: Storage, A: Api, Q: Querier>(
     let messages: Vec<CosmosMsg> = vec![
         // Transfer Trigger fee to triggerer wallet
         transfer_msg(
-            env.message.sender,
+            config.admin,
             supply_pool.triggering_cost,
             None,
             RESPONSE_BLOCK_SIZE,
@@ -760,6 +777,49 @@ fn triggering_cost_withdraw<S: Storage, A: Api, Q: Querier>(
         messages,
         log: vec![],
         data: Some(to_binary(&HandleAnswer::TriggeringCostWithdraw { status: Success })?),
+    };
+    Ok(res)
+}
+
+
+
+fn withdraw_excess<S: Storage, A: Api, Q: Querier>(
+    deps: &mut Extern<S, A, Q>,
+    env: Env,
+) -> StdResult<HandleResponse> {
+    let config_prefixed = ReadonlyPrefixedStorage::multilevel(&[CONFIG_KEY_PREFIX], &deps.storage);
+    let configstore = TypedStore::<Config, ReadonlyPrefixedStorage<'_, S>>::attach(&config_prefixed);
+    let config: Config = configstore.load(CONFIG_KEY)?;
+    check_if_admin(&config, &env.message.sender)?;
+
+
+    let mut supply_pool_prefixed = PrefixedStorage::multilevel(&[SUPPLY_POOL_KEY_PREFIX], &mut deps.storage);
+    let mut supply_store = TypedStoreMut::<SupplyPool, PrefixedStorage<'_, S>>::attach(&mut supply_pool_prefixed);
+    let mut supply_pool: SupplyPool = supply_store.load(SUPPLY_POOL_KEY)?;
+    let excess_amount= supply_pool.pending_staking_rewards+supply_pool.total_rewards_restaked;
+    if excess_amount <= Uint128(0)
+    {
+        return Err(StdError::generic_err("Triggerer share not sufficient"));
+    }
+
+    let messages: Vec<CosmosMsg> = vec![
+        // Transfer Trigger fee to triggerer wallet
+        transfer_msg(
+            config.admin,
+            excess_amount,
+            None,
+            RESPONSE_BLOCK_SIZE,
+            config.token.contract_hash.clone(),
+            config.token.address.clone(),
+        )?
+    ];
+    supply_pool.pending_staking_rewards = Uint128(0);
+    supply_pool.total_rewards_restaked= Uint128(0);
+    supply_store.store(SUPPLY_POOL_KEY, &supply_pool)?;
+    let res = HandleResponse {
+        messages,
+        log: vec![],
+        data: Some(to_binary(&HandleAnswer::WithdrawExcess { status: Success })?),
     };
     Ok(res)
 }
@@ -887,8 +947,9 @@ fn resume_contract<S: Storage, A: Api, Q: Querier>(
     let mut config_store = TypedStoreMut::<Config, PrefixedStorage<'_, S>>::attach(&mut config_prefixed);
     let mut config: Config = config_store.load(CONFIG_KEY)?;
 
-    if env.message.sender == config.admin && config.is_stopped {
+    if env.message.sender == config.admin {
         config.is_stopped = false;
+        config.is_stopped_can_withdraw=false;
         config_store.store(CONFIG_KEY, &config)?;
 
         return Ok(HandleResponse {
@@ -928,7 +989,7 @@ fn stop_contract<S: Storage, A: Api, Q: Querier>(
     }
 }
 
-fn stop_contract_with_withdraw<S: Storage, A: Api, Q: Querier>(
+fn allow_withdraw_when_stopped<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
 ) -> StdResult<HandleResponse> {
@@ -936,15 +997,14 @@ fn stop_contract_with_withdraw<S: Storage, A: Api, Q: Querier>(
     let mut configstore = TypedStoreMut::<Config, PrefixedStorage<'_, S>>::attach(&mut config_prefixed);
     let mut config: Config = configstore.load(CONFIG_KEY)?;
 
-    if env.message.sender == config.admin && !config.is_stopped {
-        config.is_stopped = true;
+    if env.message.sender == config.admin {
         config.is_stopped_can_withdraw=true;
         configstore.store(CONFIG_KEY, &config)?;
 
         return Ok(HandleResponse {
             messages: vec![],
             log: vec![],
-            data: Some(to_binary(&HandleAnswer::StopContractWithWithdraw { status: Success })?),
+            data: Some(to_binary(&HandleAnswer::AllowWithdrawWhenStopped { status: Success })?),
         });
     } else {
         return Err(StdError::generic_err(format!(
@@ -963,11 +1023,6 @@ fn emergency_redeem_from_staking<S: Storage, A: Api, Q: Querier>(
     let mut config: Config = configstore.load(CONFIG_KEY)?;
 
     check_if_admin(&config, &env.message.sender)?;
-    if !config.is_stopped {
-        return Err(StdError::generic_err(format!(
-            "Need to stop contract first"
-        )));
-    }
 
     let staking_rewards_response: LPStakingRewardsResponse = query_pending_rewards(&deps, &env, &config)?;
 
@@ -976,7 +1031,7 @@ fn emergency_redeem_from_staking<S: Storage, A: Api, Q: Querier>(
     let mut supply_pool: SupplyPool = supply_store.load(SUPPLY_POOL_KEY)?;
 
 
-    config.stopped_emergency_redeem_jackpot = supply_pool.pending_staking_rewards + supply_pool.total_tokens_staked;
+    // config.stopped_emergency_redeem_jackpot = supply_pool.pending_staking_rewards + supply_pool.total_tokens_staked + supply_pool.total_rewards_restaked;
     let mut config_prefixed = PrefixedStorage::multilevel(&[CONFIG_KEY_PREFIX], &mut deps.storage);
     TypedStoreMut::<Config, PrefixedStorage<'_, S>>::attach(&mut config_prefixed).store(CONFIG_KEY, &config)?;
 
@@ -1013,34 +1068,28 @@ pub fn redelegate_to_contract<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
 ) -> StdResult<HandleResponse> {
+    //Checking if Admin
     let config_prefixed = ReadonlyPrefixedStorage::multilevel(&[CONFIG_KEY_PREFIX], &deps.storage);
     let configstore = TypedStore::<Config, ReadonlyPrefixedStorage<'_, S>>::attach(&config_prefixed);
     let mut config: Config = configstore.load(CONFIG_KEY)?;
-
     check_if_admin(&config, &env.message.sender)?;
 
+    //Querying rewards
     let staking_rewards_response: LPStakingRewardsResponse = query_pending_rewards(&deps, &env, &config)?;
-
-    let mut lp_pending_staking_rewards = Uint128(0);
+    let mut sefi_pending_staking_rewards = Uint128(0);
     if staking_rewards_response.rewards.rewards > Uint128(0) {
-        lp_pending_staking_rewards = staking_rewards_response.rewards.rewards
+        sefi_pending_staking_rewards = staking_rewards_response.rewards.rewards
     }
 
-    let supply_pool_prefixed = ReadonlyPrefixedStorage::multilevel(&[SUPPLY_POOL_KEY_PREFIX], &deps.storage);
-    let supply_store = TypedStore::<SupplyPool, ReadonlyPrefixedStorage<'_, S>>::attach(&supply_pool_prefixed);
-    let mut supply_pool: SupplyPool = supply_store.load(SUPPLY_POOL_KEY)?;
-    let amount_to_restake = config.stopped_emergency_redeem_jackpot + supply_pool.pending_staking_rewards;
-
-    config.stopped_emergency_redeem_jackpot = Uint128(0);
-    let mut config_prefixed = PrefixedStorage::multilevel(&[CONFIG_KEY_PREFIX], &mut deps.storage);
-    let mut configstore = TypedStoreMut::<Config, PrefixedStorage<'_, S>>::attach(&mut config_prefixed);
-    configstore.store(CONFIG_KEY, &config)?;
-
-    supply_pool.total_rewards_restaked += supply_pool.pending_staking_rewards;
-    supply_pool.pending_staking_rewards = lp_pending_staking_rewards;
+    //Updating SupplyPool
     let mut supply_pool_prefixed = PrefixedStorage::multilevel(&[SUPPLY_POOL_KEY_PREFIX], &mut deps.storage);
     let mut supply_store = TypedStoreMut::<SupplyPool, PrefixedStorage<'_, S>>::attach(&mut supply_pool_prefixed);
+    let mut supply_pool: SupplyPool = supply_store.load(SUPPLY_POOL_KEY)?;
+    let amount_to_restake = supply_pool.total_tokens_staked + supply_pool.total_rewards_restaked + supply_pool.pending_staking_rewards;
+    supply_pool.total_rewards_restaked += supply_pool.pending_staking_rewards;
+    supply_pool.pending_staking_rewards = sefi_pending_staking_rewards;
     supply_store.store(SUPPLY_POOL_KEY, &supply_pool)?;
+
 
     Ok(HandleResponse {
         messages: vec![
@@ -1218,6 +1267,17 @@ fn query_available_funds<S: Storage, A: Api, Q: Querier>(
         .load(address.0.as_bytes())
         .unwrap_or(UserInfo { amount_delegated: Uint128(0), available_tokens_for_withdraw: Uint128(0), total_won: Uint128(0), entries: vec![], entry_index: vec![] });
 
+    //Getting the pending_rewards
+    let config_prefixed = ReadonlyPrefixedStorage::multilevel(&[CONFIG_KEY_PREFIX], &deps.storage);
+    let configstore = TypedStore::<Config, ReadonlyPrefixedStorage<'_, S>>::attach(&config_prefixed);
+    let config: Config = configstore.load(CONFIG_KEY)?;
+
+    if config.is_stopped_can_withdraw{
+        return     to_binary(&QueryAnswer::AvailableTokensForWithdrawl {
+            amount: (user.available_tokens_for_withdraw + user.amount_delegated),
+        })
+    }
+
     to_binary(&QueryAnswer::AvailableTokensForWithdrawl {
         amount: (user.available_tokens_for_withdraw),
     })
@@ -1392,7 +1452,7 @@ mod tests {
             },
 
             prng_seed: Binary::from("I'm Batman".as_bytes()),
-            triggerer_share_percentage: 1,
+            triggerer_share_percentage: 100,
         };
 
         (init(&mut deps, env, init_msg), deps)
@@ -1515,13 +1575,6 @@ mod tests {
         let iterator = lottery_entries_append.iter().filter(|item| matches!(item, (_, Entry::Occupied { .. })));
         assert_eq!(iterator.count(), 11);
 
-        // for user_entry in iterator {
-        //     let user_lottery_entry = match user_entry.1{
-        //         Entry::Occupied { generation: _, value } => value,
-        //         _ => panic!("Unexpected result "),
-        //     };
-        //     println!("{:?}",user_lottery_entry.user_address);
-        // }
     }
 
     #[test]
@@ -1697,7 +1750,7 @@ mod tests {
         let (start_height, end_height, duration) = match from_binary(&query_result.unwrap()).unwrap() {
             QueryAnswer::LotteryInfo {
                 start_time: start,
-                end_time: end, duration
+                end_time: end, duration, ..
             } => (start, end, duration),
             _ => panic!("Unexpected result from handle"),
         };
@@ -2074,7 +2127,7 @@ mod tests {
         deposit(&mut mocked_deps, env.clone(), HumanAddr("batman".to_string()), Uint128(5000000000)).unwrap();
 
 
-        let handlemsg = HandleMsg::ChangeTriggererShare { percentage: 2 };
+        let handlemsg = HandleMsg::ChangeTriggererShare { percentage: 200 };
         let _res = handle(&mut mocked_deps, mock_env("admin", &[], 10), handlemsg);
         let _response = claim_rewards(&mut mocked_deps, mock_env("triggerer", &[], 10000)).unwrap();
         // println!("{:?}",_response);
