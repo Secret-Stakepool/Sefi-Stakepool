@@ -142,8 +142,6 @@ pub enum QueryMsg {
     TotalRewards { height: Uint128 },
     TotalDeposits {},
     TokenInfo {},
-    ContractStatus {},
-    RewardToken {},
     IncentivizedToken {},
     LotteryInfo {},
 
@@ -217,9 +215,7 @@ pub enum QueryAnswer {
     AvailableTokensForWithdrawl {
         amount: Uint128
     },
-    ContractStatus {
-        is_stopped: bool,
-    },
+
     RewardToken {
         token: SecretContract,
     },
