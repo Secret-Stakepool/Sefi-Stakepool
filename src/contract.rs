@@ -24,7 +24,6 @@ use rand_chacha::ChaChaRng;
 use rand::distributions::WeightedIndex;
 use std::borrow::Borrow;
 
-
 pub fn init<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -81,7 +80,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
     let time = env.block.time;
     let duration = 86400u64;
 
-
     //Create first lottery
     // Save to state
     let mut lottery_prefixed = PrefixedStorage::multilevel(&[LOTTERY_KEY_PREFIX], &mut deps.storage);
@@ -96,7 +94,6 @@ pub fn init<S: Storage, A: Api, Q: Querier>(
             duration,
         },
     )?;
-
 
     // Register sSCRT and incentive token, set vks
     let messages = vec![
@@ -168,7 +165,6 @@ pub fn handle<S: Storage, A: Api, Q: Querier>(
         };
         return pad_handle_result(response, RESPONSE_BLOCK_SIZE);
     }
-
 
     let response = match msg {
 
@@ -390,7 +386,6 @@ fn deposit<S: Storage, A: Api, Q: Querier>(
     }
     supply_store.store(SUPPLY_POOL_KEY, &supply_pool)?;
 
-
     Ok(HandleResponse {
         messages: vec![
             send_msg(
@@ -410,13 +405,11 @@ fn deposit<S: Storage, A: Api, Q: Querier>(
     })
 }
 
-
 fn trigger_withdraw<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
     amount: Option<Uint128>,
 ) -> StdResult<HandleResponse> {
-
 
     //LOADING USER INFO
     let user_prefixed = ReadonlyPrefixedStorage::multilevel(&[USER_INFO_KEY, env.message.sender.0.as_bytes()], &deps.storage);
@@ -505,7 +498,6 @@ fn trigger_withdraw<S: Storage, A: Api, Q: Querier>(
         })?),
     })
 }
-
 
 fn withdraw<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -603,7 +595,6 @@ fn claim_rewards<'a, S: Storage, A: Api, Q: Querier>(
     a_lottery.end_time = &env.block.time + a_lottery.duration + 0;
     lottery_store.store(LOTTERY_KEY, &a_lottery)?;
 
-
     //Launching the lottery
     let lottery_entries_append: GenerationalStore::<LotteryEntries, ReadonlyPrefixedStorage<S>>;
     let lottery_entries = ReadonlyPrefixedStorage::multilevel(&[LOTTERY_ENTRY_KEY], &deps.storage);
@@ -677,7 +668,6 @@ fn claim_rewards<'a, S: Storage, A: Api, Q: Querier>(
     let sample = dist.sample(&mut rng);
     let winner_human = entries[sample].clone();
 
-
     //Getting the pending_rewards
     let response: LPStakingRewardsResponse = query_pending_rewards(&deps, &env, &config)?;
     let mut supply_pool_prefixed = PrefixedStorage::multilevel(&[SUPPLY_POOL_KEY_PREFIX], &mut deps.storage);
@@ -737,7 +727,6 @@ fn claim_rewards<'a, S: Storage, A: Api, Q: Querier>(
     })
 }
 
-
 fn triggering_cost_withdraw<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -770,7 +759,6 @@ fn triggering_cost_withdraw<S: Storage, A: Api, Q: Querier>(
         )?
     ];
 
-
     supply_pool.triggering_cost = Uint128(0);
     supply_store.store(SUPPLY_POOL_KEY, &supply_pool)?;
 
@@ -781,7 +769,6 @@ fn triggering_cost_withdraw<S: Storage, A: Api, Q: Querier>(
     };
     Ok(res)
 }
-
 
 fn withdraw_excess<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -877,7 +864,6 @@ fn change_lottery_duration<S: Storage, A: Api, Q: Querier>(
 
     check_if_admin(&config, &env.message.sender)?;
 
-
     let mut lottery_prefixed = PrefixedStorage::multilevel(&[LOTTERY_KEY_PREFIX], &mut deps.storage);
     let mut lottery_store = TypedStoreMut::<Lottery, PrefixedStorage<'_, S>>::attach(&mut lottery_prefixed);
     let mut a_lottery: Lottery = lottery_store.load(LOTTERY_KEY)?;
@@ -937,7 +923,6 @@ pub fn change_staking_contract<S: Storage, A: Api, Q: Querier>(
     });
 }
 
-
 fn resume_contract<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
     env: Env,
@@ -957,7 +942,6 @@ fn resume_contract<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::ResumeContract { status: Success })?),
     });
 }
-
 
 fn stop_contract<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -1006,7 +990,6 @@ fn allow_withdraw_when_stopped<S: Storage, A: Api, Q: Querier>(
         data: Some(to_binary(&HandleAnswer::AllowWithdrawWhenStopped { status: Success })?),
     })
 }
-
 
 fn emergency_redeem_from_staking<S: Storage, A: Api, Q: Querier>(
     deps: &mut Extern<S, A, Q>,
@@ -1077,7 +1060,6 @@ pub fn redelegate_to_contract<S: Storage, A: Api, Q: Querier>(
     supply_pool.pending_staking_rewards = sefi_pending_staking_rewards;
     supply_store.store(SUPPLY_POOL_KEY, &supply_pool)?;
 
-
     Ok(HandleResponse {
         messages: vec![
             send_msg(
@@ -1099,7 +1081,6 @@ pub fn redelegate_to_contract<S: Storage, A: Api, Q: Querier>(
 
 //HELPER FUNCTIONS
 
-
 fn is_admin(config: &Config, account: &HumanAddr) -> StdResult<bool> {
     if &config.admin != account {
         return Ok(false);
@@ -1118,7 +1099,6 @@ fn check_if_admin(config: &Config, account: &HumanAddr) -> StdResult<()> {
     Ok(())
 }
 
-
 fn is_triggerer(config: &Config, account: &HumanAddr) -> StdResult<bool> {
     if &config.triggerer != account {
         return Ok(false);
@@ -1134,7 +1114,6 @@ fn check_if_triggerer(config: &Config, account: &HumanAddr) -> StdResult<()> {
     }
     Ok(())
 }
-
 
 /// validate_start_height returns an error if the lottery hasn't started
 fn validate_start_time(start_time: u64, current_time: u64) -> StdResult<()> {
@@ -1168,7 +1147,6 @@ fn query_pending_rewards<S: Storage, A: Api, Q: Querier>(
 
     Ok(staking_rewards_response)
 }
-
 
 fn query_total_rewards<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>, height: Uint128) -> StdResult<Binary> {
     //Getting the pending_rewards
@@ -1205,7 +1183,6 @@ fn query_total_deposit<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) -
         deposits: supply_pool.total_tokens_staked,
     })
 }
-
 
 fn query_deposit<S: Storage, A: Api, Q: Querier>(
     deps: &Extern<S, A, Q>,
@@ -1255,7 +1232,6 @@ fn query_user_past_records<S: Storage, A: Api, Q: Querier>(
     let mut results_vec = vec![];
     let user_history = ReadonlyPrefixedStorage::multilevel(&[USER_WINNING_HISTORY_KEY, address.0.as_bytes()], &deps.storage);
 
-
     if let Err(_err) = AppendStore::<'_, UserWinningHistory, ReadonlyPrefixedStorage<'_, S>>::attach(&user_history).unwrap_or(Err(StdError::generic_err("No entries yet"))) {
         return to_binary(&QueryAnswer::UserPastRecords {
             winning_history: results_vec,
@@ -1271,7 +1247,7 @@ fn query_user_past_records<S: Storage, A: Api, Q: Querier>(
     }
 
     for i in 0..number_of_entries {
-        results_vec.push((data.get_at(data.len()-i-1).unwrap().winning_amount, data.get_at(data.len()-i-1).unwrap().time))
+        results_vec.push((data.get_at(data.len() - i - 1).unwrap().winning_amount, data.get_at(data.len() - i - 1).unwrap().time))
     }
     to_binary(&QueryAnswer::UserPastRecords {
         winning_history: results_vec,
@@ -1340,18 +1316,16 @@ fn query_past_results<S: Storage, A: Api, Q: Querier>(deps: &Extern<S, A, Q>) ->
     let last_lottery_results_append: Result<AppendStore<'_, LastLotteryResults, ReadonlyPrefixedStorage<'_, S>>, cosmwasm_std::StdError> =
         AppendStore::attach(&last_lottery_results).unwrap();
     let data = last_lottery_results_append.unwrap();
-    let  number_of_entries = data.len();
+    let number_of_entries = data.len();
 
     for i in 0..number_of_entries {
-        results_vec.push((data.get_at(data.len()-i-1).unwrap().winning_amount, data.get_at(data.len()-i-1).unwrap().time))
+        results_vec.push((data.get_at(data.len() - i - 1).unwrap().winning_amount, data.get_at(data.len() - i - 1).unwrap().time))
     }
-
 
     to_binary(&QueryAnswer::PastRecords {
         past_rewards: results_vec,
     })
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -1371,7 +1345,6 @@ mod tests {
     use secret_toolkit::incubator::generational_store::Entry;
     use crate::msg::ResponseStatus::Success;
 
-
     fn extract_error_msg<T: Any>(error: StdResult<T>) -> String {
         match error {
             Ok(response) => {
@@ -1389,7 +1362,6 @@ mod tests {
             },
         }
     }
-
 
     fn init_helper(amount: Option<u128>) -> (
         StdResult<InitResponse>,
@@ -1433,7 +1405,6 @@ mod tests {
         deposit(&mut mocked_deps, env.clone(), HumanAddr("Ironman".to_string()), Uint128(1000000)).unwrap();
         deposit(&mut mocked_deps, env.clone(), HumanAddr("Loki".to_string()), Uint128(1000000)).unwrap();//c.p:1000 deposit:8000
         deposit(&mut mocked_deps, env.clone(), HumanAddr("Batman".to_string()), Uint128(500000000)).unwrap();
-
 
         return mocked_deps;
     }
@@ -1507,7 +1478,6 @@ mod tests {
             _ => panic!("NOPE"),
         };
 
-
         let vk_store = PrefixedStorage::new(VIEWING_KEY_KEY, &mut deps.storage);
         let saved_vk = vk_store.get("bob".as_bytes()).unwrap();
 
@@ -1533,7 +1503,6 @@ mod tests {
         let vk = ViewingKey("just_a_key".to_string());
         let vk_store = PrefixedStorage::new(VIEWING_KEY_KEY, &mut deps.storage);
         let saved_vk = vk_store.get("bob".as_bytes()).unwrap();
-
 
         assert_eq!(saved_vk, &vk.to_hashed());
     }
@@ -1616,7 +1585,6 @@ mod tests {
         assert_eq!(user.entry_index.len(), 1);
     }
 
-
     #[test]
     fn test_claim_rewards() {
         //1)Checking for errors
@@ -1650,12 +1618,11 @@ mod tests {
         assert_eq!(user.available_tokens_for_withdraw.0, 10890);
         assert_eq!(user.total_won.0, 10890);
 
-        let ( _, supply_pool) = supply_pool_helper(mocked_deps);
+        let (_, supply_pool) = supply_pool_helper(mocked_deps);
         assert_eq!(supply_pool.total_rewards_restaked.0, 0);
         assert_eq!(supply_pool.pending_staking_rewards.0, 0);
         assert_eq!(supply_pool.total_tokens_staked.0, 1008000000);
     }
-
 
     #[test]
     fn test_withdraw() {
@@ -1703,7 +1670,6 @@ mod tests {
         let lottery_store = TypedStoreMut::<Lottery, PrefixedStorage<'_, MockStorage>>::attach(&mut lottery_prefix);
         let lottery: Lottery = lottery_store.load(LOTTERY_KEY).unwrap();
 
-
         let _response = claim_rewards(&mut mocked_deps, mock_env("triggerer", &[], lottery.end_time)).unwrap();
 
         let (mut mocked_deps, supply_pool) = supply_pool_helper(mocked_deps);
@@ -1735,7 +1701,6 @@ mod tests {
         //Half triggered half delegated
         let env = mock_env("Superman", &[], 601);
         let _res = trigger_withdraw(&mut mocked_deps, env.clone(), Option::from(Uint128(500000)));
-
 
         //STOPPING CONTRACT
         ////ERROR CHECK
@@ -1785,7 +1750,6 @@ mod tests {
         assert_eq!(user.amount_delegated.0, 0);
         assert_eq!(user.available_tokens_for_withdraw.0, 0);
 
-
         ////Half triggered half delegated
         let res = withdraw(&mut mocked_deps, mock_env("Superman", &[], 10), Option::from(Uint128(10000000000)));
         assert_eq!(res.unwrap_err(), StdError::generic_err("Withdrawing more amount than Total Delegated and Reduced Staked tokens"));
@@ -1804,7 +1768,6 @@ mod tests {
         let user: UserInfo = user_store.load("Spider-man".as_bytes()).unwrap();
         assert_eq!(user.amount_delegated.0, 0);
         assert_eq!(user.available_tokens_for_withdraw.0, 0);
-
 
         //WITHDRAW EXTRA FUNDS BY ADMIN
         let res = withdraw_excess(&mut mocked_deps, mock_env("non-admin", &[], 10));
@@ -1833,7 +1796,6 @@ mod tests {
         let mut mocked_deps = deps.change_querier(|_| MyMockQuerier {});
         mocked_deps = deposit_helper(mocked_deps, env);
 
-
         //Triggered before allowed
         let env = mock_env("Batman", &[], 601);
         let _res = trigger_withdraw(&mut mocked_deps, env.clone(), Option::from(Uint128(1000000000)));
@@ -1843,7 +1805,6 @@ mod tests {
         let _res = trigger_withdraw(&mut mocked_deps, env.clone(), Option::from(Uint128(500000)));
 
         //Full delegated  ----- SPIDER-MAN
-
 
         //stop contract
         //for error checking
@@ -1885,7 +1846,6 @@ mod tests {
         let (mut mocked_deps, config) = config_helper(mocked_deps);
         assert_eq!(config.staking_contract.address, HumanAddr("new_staking_contract".to_string()));
 
-
         //Redelegating to new contract
         let env = mock_env("non-admin", &[], 0);
         let res = redelegate_to_contract(&mut mocked_deps, env);
@@ -1907,7 +1867,6 @@ mod tests {
         let env = mock_env("admin", &[], 0);
         let _res = resume_contract(&mut mocked_deps, env);
 
-
         let res = withdraw(&mut mocked_deps, mock_env("Batman", &[], 10), Option::from(Uint128(10000000000)));
         assert_eq!(res.unwrap_err(), StdError::generic_err("Withdrawing more amount than Available tokens for withdraw"));
         let _res = withdraw(&mut mocked_deps, mock_env("Batman", &[], 10), Option::from(Uint128(1000000000))).unwrap();
@@ -1916,7 +1875,6 @@ mod tests {
         let user: UserInfo = user_store.load("Batman".as_bytes()).unwrap();
         assert_eq!(user.amount_delegated.0, 0);
         assert_eq!(user.available_tokens_for_withdraw.0, 0);
-
 
         //Half triggered half delegated
         let res = withdraw(&mut mocked_deps, mock_env("Superman", &[], 10), Option::from(Uint128(10000000000)));
@@ -1935,23 +1893,23 @@ mod tests {
         let (_init_result, deps) = init_helper(None);
 
         // Deposit rewards on the staking contract
-        let  mocked_deps = deps.change_querier(|_| MyMockQuerier {});
+        let mocked_deps = deps.change_querier(|_| MyMockQuerier {});
 
         let env = mock_env("not-admin", &[], 600);
-        let ( mocked_deps, config) = config_helper(mocked_deps);
+        let (mocked_deps, config) = config_helper(mocked_deps);
         let res = check_if_admin(&config, &env.message.sender).unwrap_err();
         assert_eq!(res, StdError::generic_err(
             "This is an admin command. Admin commands can only be run from admin address",
         ));
 
         let env = mock_env("admin", &[], 600);
-        let ( mocked_deps, config) = config_helper(mocked_deps);
+        let (mocked_deps, config) = config_helper(mocked_deps);
 
         let res = check_if_admin(&config, &env.message.sender);
         assert_eq!(res, Ok(()));
 
         let env = mock_env("not-triggerer", &[], 600);
-        let ( mocked_deps, config) = config_helper(mocked_deps);
+        let (mocked_deps, config) = config_helper(mocked_deps);
 
         let res = check_if_triggerer(&config, &env.message.sender).unwrap_err();
         assert_eq!(res, StdError::generic_err(
@@ -1959,7 +1917,7 @@ mod tests {
         ));
 
         let env = mock_env("triggerer", &[], 600);
-        let ( mocked_deps, config) = config_helper(mocked_deps);
+        let (mocked_deps, config) = config_helper(mocked_deps);
         let res = check_if_triggerer(&config, &env.message.sender);
         assert_eq!(res, Ok(()));
 
@@ -1974,9 +1932,8 @@ mod tests {
         let env = mock_env("admin", &[], 600);
         let (mut mocked_deps, _config) = config_helper(mocked_deps);
         let _res = change_admin(&mut mocked_deps, env, HumanAddr("someone".to_string())).unwrap();
-        let ( mocked_deps, config) = config_helper(mocked_deps);
+        let (mocked_deps, config) = config_helper(mocked_deps);
         assert_eq!(config.admin, HumanAddr("someone".to_string()));
-
 
         let (mut mocked_deps, _config) = config_helper(mocked_deps);
         let res = change_admin(&mut mocked_deps, mock_env("not-admin", &[], 600), HumanAddr("triggerer".to_string())).unwrap_err();
@@ -2013,7 +1970,6 @@ mod tests {
 
         let _res = handle(&mut deps, mock_env("Batman", &[], 10000000), HandleMsg::Withdraw { amount: Option::from(Uint128(500000000)) });
     }
-
 
     #[test]
     fn testing_change_triggerer_share() {
@@ -2077,7 +2033,6 @@ mod tests {
         let a_lottery: Lottery = lottery_store.load(LOTTERY_KEY).unwrap();
         let query_msg = QueryMsg::LotteryInfo {};
         let query_result = query(&mocked_deps, query_msg);
-
 
         let (start_height, end_height, duration) = match from_binary(&query_result.unwrap()).unwrap() {
             QueryAnswer::LotteryInfo {
@@ -2154,7 +2109,6 @@ mod tests {
         assert_eq!(balance, Uint128(5000000000));
     }
 
-
     #[test]
     fn test_query_total_rewards() {
         let (_init_result, deps) = init_helper(None);
@@ -2163,7 +2117,6 @@ mod tests {
         // deposit rewards on the staking contract
         let mut mocked_deps = deps.change_querier(|_| MyMockQuerier {});
         mocked_deps = deposit_helper(mocked_deps, env.clone());
-
 
         let height = Uint128(env.block.height as u128);
 
@@ -2174,8 +2127,7 @@ mod tests {
             QueryAnswer::TotalRewards { rewards } => (rewards),
             _ => panic!("Unexpected result from handle"),
         };
-        let ( mocked_deps, config) = config_helper(mocked_deps);
-
+        let (mocked_deps, config) = config_helper(mocked_deps);
 
         let response: LPStakingRewardsResponse = LPStakingQueryMsg::Rewards {
             address: env.contract.address,
@@ -2193,7 +2145,6 @@ mod tests {
         // deposit rewards on the staking contract
         let mut mocked_deps = deps.change_querier(|_| MyMockQuerier {});
         mocked_deps = deposit_helper(mocked_deps, env);
-
 
         let query_msg = QueryMsg::TotalDeposits {};
         let query_result = query(&mocked_deps, query_msg);
@@ -2240,7 +2191,6 @@ mod tests {
 
         let _res: QueryAnswer = from_binary(&query_all_past_results(&mocked_deps).unwrap()).unwrap();
         // println!("{:?}",_res);
-
     }
 
     // Query tests
@@ -2253,7 +2203,6 @@ mod tests {
         let mut mocked_deps = deps.change_querier(|_| MyMockQuerier {});
 
         deposit(&mut mocked_deps, env.clone(), HumanAddr("batman".to_string()), Uint128(5000000000)).unwrap();
-
 
         let no_vk_yet_query_msg = QueryMsg::Balance {
             address: HumanAddr("batman".to_string()),
@@ -2301,8 +2250,6 @@ mod tests {
             "Wrong viewing key for this address or viewing key not set".to_string()
         );
     }
-
-
 
     #[test]
     fn test_user_past_records() {
